@@ -1,5 +1,5 @@
 ; ==============================================================================
-;  Project: Boutaba-Kernel-Jitter-Clock-Verifier v1.0
+;  Project: Boutaba-Kernel-Jitter-Clock-Verifier v3.0 (Hardened)
 ;  Developer: Boutaba Motezeballah — Systems Architect & Reverse Engineer
 ;  Architecture: x86_64 ASM (Linux Microarchitectural Auditing Platform)
 ;  Description: Safe Cycle-Level Timing Jitter Audit for Integrity Verification.
@@ -15,7 +15,7 @@ _start:
     ; --------------------------------------------------------------------------
     ; 1. First Time-Stamp Capture (T1 Execution Frame)
     ; --------------------------------------------------------------------------
-    xor rax, rax
+    xor rax, rax        ; Clear RAX to request CPUID leaf 0
     cpuid               ; Serialize instruction pipeline to prevent out-of-order execution
     rdtsc               ; Read hardware Time-Stamp Counter into EDX:EAX registers
     shl rdx, 32         ; Shift high 32-bits of counter to upper half of RDX
@@ -23,8 +23,9 @@ _start:
     mov r8, rax         ; Store T1 baseline time-stamp inside R8 register
 
     ; --------------------------------------------------------------------------
-    ; 2. Lightweight Target Execution Path (Non-Malicious Protected Code Block)
+    ; 2. Lightweight Target Execution Path (Deterministic Environment)
     ; --------------------------------------------------------------------------
+    xor rbx, rbx        ; Clear RBX to guarantee a safe, non-overflow mathematical baseline
     mov rcx, 100        ; Initialize lightweight loop constraint counter
 .audit_loop:
     add rbx, rcx        ; Trivial mathematical execution step
@@ -32,12 +33,13 @@ _start:
     jnz .audit_loop     ; Recurse loop until counter reaches zero
 
     ; --------------------------------------------------------------------------
-    ; 3. Second Time-Stamp Capture (T2 Execution Frame)
+    ; 3. Second Time-Stamp Capture (T2 Execution Frame using Hardened RDTSCP)
     ; --------------------------------------------------------------------------
-    lfence              ; Enforce memory load barrier to serialize upcoming execution
-    rdtsc               ; Read final hardware Time-Stamp Counter into EDX:EAX
-    shl rdx, 32
+    rdtscp              ; Hardened read: serializes pipeline and extracts counter to EDX:EAX
+    shl rdx, 32         ; Shift high 32-bits of counter
     or rax, rdx         ; Combine EDX and EAX into a single 64-bit value in RAX
+    
+    ; أمر RDTSCP يقوم بتغيير مسجل RCX تلقائياً، لكن حلقة الفحص انتهت فلا ضرر عتادي هنا
 
     ; --------------------------------------------------------------------------
     ; 4. Mathematical Delta Evaluation & Divergence Threshold Test
