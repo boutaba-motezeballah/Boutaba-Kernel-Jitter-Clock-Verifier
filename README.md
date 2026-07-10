@@ -31,6 +31,19 @@ graph TD
         Gate -->|Secure| Exit_Clean[Exit 0]
         Gate -->|Anomaly| Exit_Mitigate[Exit 120]
     end
+
+    %% إزالة الخلفية الرمادية وتثبيت الألوان
+    style Layer0 fill:none,stroke:#333
+    style Layer1 fill:none,stroke:#333
+    style Layer2 fill:none,stroke:#333
+    style Layer3 fill:none,stroke:#333
+    style Layer4 fill:none,stroke:#333
+
+    style Init fill:#1f1f1f,stroke:#555,color:#fff
+    style T1_Fetch fill:#0052cc,stroke:#0052cc,color:#fff
+    style Gate fill:#ff5555,stroke:#ff5555,color:#fff
+    style Exit_Clean fill:#00875a,stroke:#00875a,color:#fff
+    style Exit_Mitigate fill:#de350b,stroke:#de350b,color:#fff
 ```
 
 ---
