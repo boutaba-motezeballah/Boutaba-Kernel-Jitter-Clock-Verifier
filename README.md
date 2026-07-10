@@ -1,25 +1,58 @@
 # Technical Blueprint: Boutaba Kernel Jitter Clock Verifier (v3.0)
-**Chief Architect:** Motezeballah Boutaba | **Platform:** x86_64 Linux | **Language:** 100% Assembly
+
+**Chief Architect:** Motezeballah Boutaba
+**Target Architecture:** x86_64 Linux Optimized
+**Design Paradigm:** Pure Assembly Runtime Entropy Audit
+
+---
 
 ##  1. Microarchitectural Core Design Flow
-The tool utilizes `CPUID` and `LFENCE` for pipeline serialization to detect timing anomalies, ensuring secure execution frames.
+
+The framework uses a two-stage time-stamp capture, isolating code between `CPUID` and `RDTSCP` instructions to eliminate speculative execution interference and detect virtualization.
 
 ```mermaid
 graph TD
-    A[Init] --> B[CPUID: Barrier]
-    B --> C[RDTSC: Start]
-    C --> D[Audit]
-    D --> E[LFENCE: Fence]
-    E --> F[RDTSC: End]
-    F --> G[Delta Calculation]
-    G --> H{Jitter Threshold?}
-    H -->|Secure| I[Exit 0]
-    H -->|Intercepted| J[Exit 120]
+    subgraph Layer0 [Hardware Execution]
+        Init[Initialize] --> Barrier1[CPUID]
+    end
+    subgraph Layer1 [T1 Baseline]
+        Barrier1 --> T1_Fetch[RDTSC]
+        T1_Fetch --> T1_Store[Store]
+    end
+    subgraph Layer2 [Workload]
+        T1_Store --> Loop[Run Loop]
+    end
+    subgraph Layer3 [T2 Validation]
+        Loop --> Barrier2[RDTSCP]
+        Barrier2 --> Delta[Compute Delta]
+    end
+    subgraph Layer4 [Mitigation]
+        Delta --> Gate{Threshold < 500}
+        Gate -->|Secure| Exit_Clean[Exit 0]
+        Gate -->|Anomaly| Exit_Mitigate[Exit 120]
+    end
 ```
 
-##  2. Deployment
+---
+
+##  2. Low-Level Pipeline Specifications
+
+*   **Serialization:** Uses `CPUID` to flush pipeline and establish a clean baseline.
+*   **Precision:** Employs `RDTSC` and `RDTSCP` to calculate execution cycles.
+*   **Defense:** Enforces a 500-cycle threshold, terminating on unexpected latency.
+
+---
+
+##  3. Compilation & Usage
+
 ```bash
 nasm -f elf64 clock_verifier.asm -o clock_verifier.o
 ld clock_verifier.o -o boutaba_clock_verifier
 strip --strip-all boutaba_clock_verifier
 ```
+
+---
+
+##  4. Metadata
+- **Language:** 100% Assembly (x86_64)
+- **Target:** Linux Kernel ABI
