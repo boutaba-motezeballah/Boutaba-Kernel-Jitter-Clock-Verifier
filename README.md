@@ -1,4 +1,4 @@
-# Technical Blueprint: Boutaba Kernel Jitter Clock Verifier (v3.0)
+# Technical Blueprint: rdtsc-anti-debug (v3.0)
 
 **Chief Architect:** Motezeballah Boutaba
 **Target Architecture:** x86_64 Linux Optimized
