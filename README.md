@@ -1,59 +1,31 @@
-# Technical Blueprint: rdtsc-anti-debug (v3.0)
+# RDTSC Anti-Debugging (PoC)
 
-**Chief Architect:** Motezeballah Boutaba
-**Target Architecture:** x86_64 Linux Optimized
-**Design Paradigm:** Pure Assembly Runtime Entropy Audit
+## Overview
+This repository contains a low-level anti-debugging Proof-of-Concept (PoC) implemented in **pure x86_64 Assembly** for Linux. It utilizes the Time-Stamp Counter (`RDTSC`) to detect timing anomalies introduced by software debuggers (like GDB), interactive tracers, or dynamic analysis sandboxes.
 
----
+## How it Works
+The utility measures the exact number of CPU clock cycles elapsed between two execution points. Under a debugger or an emulated environment, step-by-step execution or execution hooks drastically increase latency.
 
-##  1. Microarchitectural Core Design Flow
+### Core Execution Flow:
+1. **Serialization (`CPUID`):** Flushes the processor pipeline to guarantee timing precision and clear out speculative execution artifacts.
+2. **First Timestamp (`RDTSC`):** Captures the initial CPU cycle count.
+3. **Execution Barrier (`LFENCE`):** Prevents instruction reordering around the measurement block.
+4. **Second Timestamp (`RDTSC`):** Captures the trailing cycle count.
+5. **Delta Assessment:** Computes the difference. If the execution cycle delta exceeds the predefined threshold (e.g., ~500 cycles), an anomaly is identified, and the program exits with code `120`. Otherwise, it exits safely (`0`).
 
-The framework uses a two-stage time-stamp capture, isolating code between `CPUID` and `RDTSCP` instructions to eliminate speculative execution interference and detect virtualization.
-
-```mermaid
-graph TD
-    A[Core Pipeline Initialization] --> B[Assembly Serialization: CPUID]
-    B --> C[RDTSC Time-Stamp]
-    C --> D[Arithmetic Audit]
-    D --> E[LFENCE Barrier]
-    E --> F[Final RDTSC]
-    F --> G[Calculate Delta]
-    G --> H{Jitter < Threshold?}
-    H -->|True| I[Secure Exit 0]
-    H -->|False| J[Anomaly Exit 120]
-
-    style A fill:#1a1a24,stroke:#333,color:#fff
-    style B fill:#1a1a24,stroke:#333,color:#fff
-    style C fill:#1e1b4b,stroke:#0052cc,color:#fff
-    style D fill:#1e1b4b,stroke:#333,color:#fff
-    style E fill:#1a1a24,stroke:#333,color:#fff
-    style F fill:#1e1b4b,stroke:#0052cc,color:#fff
-    style G fill:#1a1a24,stroke:#333,color:#fff
-    style H fill:#311005,stroke:#ff5555,color:#fff
-    style I fill:#062d1a,stroke:#00875a,color:#fff
-    style J fill:#450a0a,stroke:#de350b,color:#fff
-```
-
----
-
-##  2. Low-Level Pipeline Specifications
-
-*   **Serialization:** Uses `CPUID` to flush pipeline and establish a clean baseline.
-*   **Precision:** Employs `RDTSC` and `RDTSCP` to calculate execution cycles.
-*   **Defense:** Enforces a 500-cycle threshold, terminating on unexpected latency.
-
----
-
-##  3. Compilation & Usage
+## Compilation and Usage
+To build the project natively on an x86_64 Linux system:
 
 ```bash
+# Assemble the source file
 nasm -f elf64 clock_verifier.asm -o clock_verifier.o
-ld clock_verifier.o -o boutaba_clock_verifier
-strip --strip-all boutaba_clock_verifier
+
+# Link the object file into a static binary
+ld clock_verifier.o -o rdtsc_verifier
+
+# Run the test binary
+./rdtsc_verifier
 ```
 
----
-
-##  4. Metadata
-- **Language:** 100% Assembly (x86_64)
-- **Target:** Linux Kernel ABI
+## Practical Application
+In production malware analysis defenses, this assembly routine is typically implemented as an inline macro inside a larger application rather than running as a standalone tool.
